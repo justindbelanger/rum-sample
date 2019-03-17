@@ -1,4 +1,5 @@
-(ns rum-sample.word-assoc.game-utils)
+(ns rum-sample.word-assoc.game-utils
+  (:require [tilakone.core :as tk]))
 
 (defn get-cell-origin [x-num y-num
                        {:keys [board-width
@@ -32,29 +33,32 @@
                                  board-height
                                  player-colors]
                           :as game-state}]
-  (let [num-cells (* num-cells-x num-cells-y)
-        width (/ board-width num-cells-x)
-        height (/ board-height num-cells-y)]
-    (for [x (range num-cells-x)
-          y (range num-cells-y)
-          :let [[x-origin y-origin] (get-cell-origin x y game-state)
-                index (convert-coord-to-index num-cells-y x y)
-                state @(:state game-state)
-                word (nth (vec (:game-words state)) index)
-                word-color (color-for-word word state player-colors)
-                is-guessed (contains? (apply clojure.set/union (:player-guessed-words state)) word)]]
-      [[:fill {:color word-color}
-        [:rect {:x x-origin
-                :y y-origin
-                :width width
-                :height height}]]
-       [:fill {:color (if is-guessed "black" "white")}
-        [:text {:value word
-                :x (+ 10 x-origin)
-                :y (+ 30 y-origin)
-                :size 16
-                :font "Georgia"
-                :style :italic}]]])))
+  (if (= (::tk/state game-state) :before-start)
+    [:text {:value "Waiting for the game to begin."
+            :y (/ board-height 2)}]
+    (let [num-cells (* num-cells-x num-cells-y)
+         width (/ board-width num-cells-x)
+         height (/ board-height num-cells-y)]
+     (for [x (range num-cells-x)
+           y (range num-cells-y)
+           :let [[x-origin y-origin] (get-cell-origin x y game-state)
+                 index (convert-coord-to-index num-cells-y x y)
+                 state game-state
+                 word (nth (vec (:game-words state)) index)
+                 word-color (color-for-word word state player-colors)
+                 is-guessed (contains? (apply clojure.set/union (:player-guessed-words state)) word)]]
+       [[:fill {:color word-color}
+         [:rect {:x x-origin
+                 :y y-origin
+                 :width width
+                 :height height}]]
+        [:fill {:color (if is-guessed "black" "white")}
+         [:text {:value word
+                 :x (+ 10 x-origin)
+                 :y (+ 30 y-origin)
+                 :size 16
+                 :font "Georgia"
+                 :style :italic}]]]))))
 
 (comment
   (render-game-cells {:board-width 250

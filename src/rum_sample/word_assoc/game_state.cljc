@@ -1,6 +1,5 @@
 (ns rum-sample.word-assoc.game-state
   (:require [rum-sample.word-assoc.word-utils :as wu]
-            [clojure.inspector :as ci]
             [clojure.set :as set]
             [tilakone.core :as tk]))
 
@@ -100,11 +99,18 @@
                     :set-p1-hint (set-p1-hint fsm)
                     :p1-guess (p1-guess fsm)))
    ::tk/state   :before-start
-   :game-words #{}
    ::tk/guard? (fn [{::tk/keys [guard] :as fsm}] (guard fsm))
    ::tk/match? (fn [{::tk/keys [signal on]}] (do #_(println {:signal signal
                                                            :on on})
                                                  (-> signal first (= on))))
+   :game-words #{}
+   :board-width 750
+   :board-height 250
+   :num-cells-x 5
+   :num-cells-y 5
+   :word-count 25
+   :player-colors ["red" "blue" "green"]
+   :player-num-words [7 6] ;indexed by player ID: 0 or 1
    :player-hints []
    :player-words [[] []]
    :player-guessed-words [#{} #{}]

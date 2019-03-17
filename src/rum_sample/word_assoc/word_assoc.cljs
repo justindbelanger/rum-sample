@@ -2,6 +2,8 @@
   (:require [play-cljs.core :as p]
             [rum-sample.word-assoc.word-utils :as wu]
             [rum-sample.word-assoc.game-utils :as gl]
+            [rum-sample.word-assoc.game-state :as gs]
+            [tilakone.core :as tk]
             [rum.core :refer [defc] :as rum]))
 
 (def const
@@ -23,12 +25,16 @@
 (defn update-state [state]
   state)
 
+(defn next-turn [state input]
+  (tk/apply-signal state [:hint input]))
+
 (def main-screen
   (reify p/Screen
     ;; runs when the screen is first shown
     (on-show [this]
       ;; start the state map with...
-      (reset! state (wu/init-game)))
+      (reset! state gs/codewords)
+      #_(reset! state (wu/init-game)))
 
     ;; runs when the screen is hidden
     (on-hide [this])
@@ -37,17 +43,23 @@
     (on-render [this]
       ;; we use `render` to display...
       (p/render game (render-state @state))
-      (swap! state update-state))))
+      #_(swap! state update-state))))
 
 (defc game-controls < rum/reactive [game-atom]
   (rum/react game-atom)
-  [:div
-   [:p (str "Current turn: "
-            (if-let [current-state (:state @game-atom)]
-              (:current-turn @current-state)
-              :p1))]
-   [:input {:type :text}]
-   [:button {:on-click #(swap! game-atom wu/next-turn!)} "Next"]])
+  (let [input-id "player-input"
+        {:keys [current-turn] :as game-state} @game-atom]
+    (if (= (::tk/state game-state) :before-start)
+      [:button {:on-click #(swap! game-atom (fn [gs] (tk/apply-signal gs [:start])))}
+       "Start"]
+      [:div
+      [:p (str "Current turn: " current-turn)]
+      [:input {:type :text :id input-id}]
+      [:button {:on-click #(swap! game-atom
+                                  next-turn
+                                  (-> (js/document.getElementById input-id)
+                                      .-value ))}
+       "Next"]])))
 
 (defn start-game []
   (doto game

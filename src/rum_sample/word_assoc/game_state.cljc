@@ -3,6 +3,12 @@
             [clojure.set :as set]
             [tilakone.core :as tk]))
 
+;;; constants that are not affected by game state
+
+(def const
+  {:board-width 750
+   :board-height 250})
+
 ;;; actions
 
 (defn invalid-hint [{::tk/keys [signal process]
@@ -40,11 +46,11 @@
 
 (defn add-game-words [process]
   "Populates part of the fsm with the initial game state."
-  (let [game-words (wu/get-game-words)
-        p1-word-count (-> wu/game-state :player-num-words first)
+  (let [game-words (wu/get-game-words process)
+        p1-word-count (-> process :player-num-words first)
         p1-words (wu/get-n-random-words game-words p1-word-count)
         remaining-game-words (set/difference game-words p1-words)
-        p2-word-count (-> wu/game-state :player-num-words second)
+        p2-word-count (-> process :player-num-words second)
         p2-words (wu/get-n-random-words remaining-game-words p2-word-count)]
     (-> process
         (assoc :game-words game-words)
@@ -90,7 +96,7 @@
 
 ;; this is the top-level configuration and state for our state machine.
 (def codewords
-  {::tk/states  game-states
+  {::tk/states game-states
    ::tk/action! (fn [{::tk/keys [action] :as fsm}]
                   (println {:action action})
                   (case action
@@ -104,8 +110,6 @@
                                                            :on on})
                                                  (-> signal first (= on))))
    :game-words #{}
-   :board-width 750
-   :board-height 250
    :num-cells-x 5
    :num-cells-y 5
    :word-count 25

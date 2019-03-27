@@ -6,16 +6,11 @@
             [tilakone.core :as tk]
             [rum.core :refer [defc] :as rum]))
 
-(def const
-  {:board-width 750
-   :board-height 750
-   :num-cells-x 5
-   :num-cells-y 5})
-
-(defonce game (p/create-game
-               (:board-width const)
-               (:board-height const)
-               {:parent (js/document.getElementById "game")}))
+(defonce game (let [{:keys [board-width board-height]} gs/const]
+                (p/create-game
+                 board-width
+                 board-height
+                {:parent (js/document.getElementById "game")})))
 
 (defonce state (atom {}))
 
@@ -33,8 +28,7 @@
     ;; runs when the screen is first shown
     (on-show [this]
       ;; start the state map with...
-      (reset! state gs/codewords)
-      #_(reset! state (wu/init-game)))
+      (reset! state gs/codewords))
 
     ;; runs when the screen is hidden
     (on-hide [this])
@@ -42,8 +36,7 @@
     ;; runs every time a frame must be drawn (about 60 times per sec)
     (on-render [this]
       ;; we use `render` to display...
-      (p/render game (render-state @state))
-      #_(swap! state update-state))))
+      (p/render game (render-state @state)))))
 
 (defc game-controls < rum/reactive [game-atom]
   (rum/react game-atom)

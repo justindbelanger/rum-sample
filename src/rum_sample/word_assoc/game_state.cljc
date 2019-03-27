@@ -44,22 +44,23 @@
         (assoc-in [::tk/process :player-hints 0] hint)
         (update ::tk/process (fn [p] (dissoc p :hint-error))))))
 
-(defn add-game-words [process]
+(defn add-game-words [{::tk/keys [process]
+                       :as fsm}]
   "Populates part of the fsm with the initial game state."
-  (let [game-words (wu/get-game-words process)
-        p1-word-count (-> process :player-num-words first)
-        p1-words (wu/get-n-random-words game-words p1-word-count)
-        remaining-game-words (set/difference game-words p1-words)
-        p2-word-count (-> process :player-num-words second)
-        p2-words (wu/get-n-random-words remaining-game-words p2-word-count)]
-    (-> process
-        (assoc :game-words game-words)
-        (assoc :p1-words p1-words)
-        (assoc :p2-words p2-words))))
+  (assoc fsm ::tk/process
+         (let [game-words (wu/get-game-words process)
+               p1-word-count (-> process :player-num-words first)
+               p1-words (wu/get-n-random-words game-words p1-word-count)
+               remaining-game-words (set/difference game-words p1-words)
+               p2-word-count (-> process :player-num-words second)
+               p2-words (wu/get-n-random-words remaining-game-words p2-word-count)]
+           (-> process
+               (assoc :game-words game-words)
+               (assoc :p1-words p1-words)
+               (assoc :p2-words p2-words)))))
 
 (defn p1-guess [{::tk/keys [signal process]
                  :as fsm}]
-  (println (str "fsm: " fsm))
   (let [{:keys [p1-words]} process
         [_ guess] signal]
     (if (p1-words guess)
@@ -82,7 +83,7 @@
    ;; if the hint is invalid, then player one must correct it.
    {::tk/name :p1
     ::tk/transitions [{::tk/on :hint
-                       ::tk/guards [valid-hint?]
+                       ::tk/guards [:valid-hint?]
                        ::tk/actions [:set-p1-hint]
                        ::tk/to :p1-guesser}
                       {::tk/on ::tk/_
@@ -94,21 +95,21 @@
                        ::tk/to :p2}]}
    {::tk/name :p2}])
 
+;; this maps each action and each guard keyword to the function to transform the state while transitioning.
+(def actions {:add-game-words add-game-words
+              :invalid-hint invalid-hint
+              :set-p1-hint set-p1-hint
+              :p1-guess p1-guess})
+(def guards {:valid-hint? valid-hint?})
+
 ;; this is the top-level configuration and state for our state machine.
 (def codewords
   {::tk/states game-states
    ::tk/action! (fn [{::tk/keys [action] :as fsm}]
-                  (println {:action action})
-                  (case action
-                    :add-game-words (update fsm ::tk/process add-game-words)
-                    :invalid-hint (invalid-hint fsm)
-                    :set-p1-hint (set-p1-hint fsm)
-                    :p1-guess (p1-guess fsm)))
+                  ((actions action) fsm))
    ::tk/state   :before-start
-   ::tk/guard? (fn [{::tk/keys [guard] :as fsm}] (guard fsm))
-   ::tk/match? (fn [{::tk/keys [signal on]}] (do #_(println {:signal signal
-                                                           :on on})
-                                                 (-> signal first (= on))))
+   ::tk/guard? (fn [{::tk/keys [guard] :as fsm}] ((guards guard) fsm))
+   ::tk/match? (fn [{::tk/keys [signal on]}] (-> signal first (= on)))
    :game-words #{}
    :num-cells-x 5
    :num-cells-y 5
